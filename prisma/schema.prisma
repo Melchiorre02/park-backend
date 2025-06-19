@@ -1,0 +1,272 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "darwin", "darwin-arm64"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                             String        @id @default(uuid())
+  name                           String
+  email                          String        @unique
+  password                       String
+  role                           String?
+  createdAt                      DateTime      @default(now())
+  profileImg                     String?
+  mustChangePassword             Boolean       @default(false)
+
+  Abbonamento                    Abbonamento[]
+  Allenamento                    Allenamento[]
+  Cliente                        Cliente?
+  Esercizio                      Esercizio[]
+  Feedback                       Feedback[]
+  Messaggio_Messaggio_aIdToUser  Messaggio[]   @relation("Messaggio_aIdToUser")
+  Messaggio_Messaggio_daIdToUser Messaggio[]   @relation("Messaggio_daIdToUser")
+  Progresso                      Progresso[]
+  Ticket                         Ticket[]
+  Planner                        Planner[]
+}
+
+model Ticket {
+  id       String   @id @default(uuid())
+  type     String
+  quantity Int
+  date     DateTime
+  code     String
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+
+  showId   String?
+  show     Show?     @relation(fields: [showId], references: [id])
+}
+
+model Planner {
+  id        String   @id @default(uuid())
+  name      String
+  date      String
+  items     Json
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Abbonamento {
+  id        String   @id
+  tipo      String
+  inizio    DateTime
+  fine      DateTime
+  clienteId String
+  coachId   String?
+  pagato    Boolean  @default(false)
+  prezzo    Float?
+
+  Cliente   Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  User      User?    @relation(fields: [coachId], references: [id])
+
+  @@index([clienteId])
+  @@index([coachId])
+}
+
+model AllenamentiEsercizio {
+  id            String      @id
+  allenamentoId String
+  esercizioId   String
+  serie         Int
+  ripetizioni   Int
+  peso          Float?
+
+  Allenamento   Allenamento @relation(fields: [allenamentoId], references: [id])
+  Esercizio     Esercizio   @relation(fields: [esercizioId], references: [id])
+
+  @@unique([allenamentoId, esercizioId])
+  @@index([esercizioId])
+}
+
+model Allenamento {
+  id                   String                 @id
+  titolo               String
+  descrizione          String?
+  data                 DateTime
+  userId               String?
+
+  AllenamentiEsercizio AllenamentiEsercizio[]
+  User                 User?                  @relation(fields: [userId], references: [id])
+  ClienteWorkout       ClienteWorkout[]
+  Feedback             Feedback[]
+
+  @@index([userId])
+}
+
+model Cliente {
+  id             String           @id
+  userId         String           @unique
+  note           String?
+  createdAt      DateTime         @default(now())
+
+  Abbonamento    Abbonamento[]
+  User           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ClienteWorkout ClienteWorkout[]
+  Feedback       Feedback[]
+  Messaggio      Messaggio[]
+  Progresso      Progresso[]
+}
+
+model ClienteWorkout {
+  id            String      @id
+  clienteId     String
+  allenamentoId String
+
+  Allenamento   Allenamento @relation(fields: [allenamentoId], references: [id])
+  Cliente       Cliente     @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@unique([clienteId, allenamentoId])
+  @@index([allenamentoId])
+}
+
+model Esercizio {
+  id                   String                 @id
+  nome                 String
+  descrizione          String?
+  categoria            String?
+  coachId              String
+  immagineUrl          String?
+
+  AllenamentiEsercizio AllenamentiEsercizio[]
+  User                 User                   @relation(fields: [coachId], references: [id])
+
+  @@index([coachId])
+}
+
+model Feedback {
+  id            String      @id
+  voto          Int
+  clienteId     String
+  coachId       String?
+  commento      String?
+  creatoIl      DateTime    @default(now())
+  allenamentoId String
+
+  Allenamento   Allenamento @relation(fields: [allenamentoId], references: [id], onDelete: Cascade)
+  Cliente       Cliente     @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  User          User?       @relation(fields: [coachId], references: [id])
+
+  @@index([allenamentoId])
+  @@index([clienteId])
+  @@index([coachId])
+}
+
+model Messaggio {
+  id                        String   @id
+  daId                      String
+  aId                       String
+  clienteId                 String?
+  testo                     String
+  letto                     Boolean  @default(false)
+  inviatoIl                 DateTime @default(now())
+
+  User_Messaggio_aIdToUser  User     @relation("Messaggio_aIdToUser", fields: [aId], references: [id])
+  Cliente                   Cliente? @relation(fields: [clienteId], references: [id])
+  User_Messaggio_daIdToUser User     @relation("Messaggio_daIdToUser", fields: [daId], references: [id])
+
+  @@index([aId])
+  @@index([clienteId])
+  @@index([daId])
+}
+
+model Progresso {
+  id        String   @id
+  data      DateTime
+  altezza   Float?
+  clienteId String
+  coachId   String?
+  forza     String?
+  note      String?
+  peso      Float?
+  torace    Float?
+  vita      Float?
+
+  Cliente   Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  User      User?    @relation(fields: [coachId], references: [id])
+
+  @@index([clienteId])
+  @@index([coachId])
+}
+
+model Attraction {
+  id             String @id @default(uuid())
+  name           String @unique
+  description    String
+  category       String
+  waitTime       Int
+  ageRestriction String
+  intensity      Int
+  zone           String
+  rating         Float
+  popularity     Int
+  views          Int
+  likes          Int
+  status         String
+  image          String
+}
+
+model Show {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String
+  category    String
+  times       String
+  day         String
+  duration    Int
+  location    String
+  capacity    Int
+  image       String
+  rating      Float
+  popularity  Int
+  status      String
+  nextShow    String
+  likes       Int
+  views       Int
+
+  Ticket      Ticket[]
+}
+
+model AttractionMap {
+  id          String  @id @default(uuid())
+  x           Int
+  y           Int
+  name        String  @unique
+  waitTime    Int
+  type        String
+  description String
+  zone        String
+  duration    String
+  height      String
+  intensity   String
+  rating      Float
+  reviews     Int
+  openTime    String
+  fastPass    Boolean
+  image       String
+}
+
+model ShowMap {
+  id          String  @id @default(uuid())
+  x           Int
+  y           Int
+  name        String  @unique
+  waitTime    Int
+  type        String
+  description String
+  zone        String
+  duration    String
+  height      String
+  intensity   String
+  rating      Float
+  reviews     Int
+  openTime    String
+  fastPass    Boolean
+  image       String
+}
